@@ -1,0 +1,8 @@
+numpy
+matplotlib
+
+--extra-index-url https://download.pytorch.org/whl/cu118
+torch
+tqdm
+pandas
+PyWavelets
