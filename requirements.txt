@@ -7,3 +7,4 @@ torch
 tqdm
 pandas
 PyWavelets
+scikit-learn
