@@ -12,6 +12,7 @@
 #SBATCH --gpus-per-node=rtx_2080_ti:1
 
 # Load modules or your own conda environment here
+source /cluster/apps/local/env2lmod.sh
 module load gcc/8.2.0 python_gpu/3.10.4 cuda/11.8.0 git-lfs/2.3.0 git/2.31.1 eth_proxy
 
 # update environment !!! this is important

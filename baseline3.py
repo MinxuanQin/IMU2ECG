@@ -5,6 +5,7 @@ import pickle
 import pywt
 import scipy
 from tqdm import tqdm
+import os
 
 ## Defined by Minxuan
 from help_tool import load_pickle_file, spec_analysis
@@ -12,6 +13,7 @@ from help_tool import plot_ecg_imu, plot_wt_transforms, plot_baseline3_res
 
 ## Modified by Minxuan, NLMS with adaptive step size
 from adaptive_filter.lms import NLMS
+
 ## Define some constants
 window_size = 8 # seconds
 window_offset = 2 # seconds
@@ -27,7 +29,9 @@ filter_order = 10
 f_0 = 0.7
 p = 0.1
 
-plot_dir = 'plots/step5_hrvest/w2f7n10_more/'
+plot_dir = 'plots/w2f7n10_fix/'
+if not os.path.exists(plot_dir):
+    os.mkdir(plot_dir)
 
 def swt_decomposition(imu_signals, filter, level):
     '''
@@ -265,21 +269,33 @@ def swt_step5(signals, ref_noises, fs, filter_order, f_0, p):
     ## convert to sampling rate
     hrv_signals = bpm_signals / 60 * fs
     hrv_signals = hrv_signals.astype(int)
+    '''
+    fig = plt.figure(figsize=(20, 10))
     plt.hist(hrv_signals, bins=80)
     plt.savefig(plot_dir + 'hrv_est.png')
-    plt.clf()
+    plt.close(fig)
+    '''
 
     res = []
     error_vec = []
     output_vec = []
+    ## New idea: update the coefficient through the whole process
+    filter_coeff_size = filter_order + 1
+    init_coef = np.random.randn(filter_coeff_size)
+    # sub_nlms = NLMS(step=0.1, filter_order=filter_order, gamma=1e-12, init_coef=init_coef, f_0=f_0, p=p, hr_est=hrv_est)
     with tqdm(total=len(signals)) as pbar:
-        pbar.set_description('Step5:')
+        pbar.set_description('Step 5:')
         for sig, ref, hrv_est in zip(signals, ref_noises, hrv_signals):
-            init_coef = np.ones(filter_order+1)
-            curr_nlms = NLMS(step=0.1, filter_order=filter_order, gamma=1e-12, init_coef=init_coef, f_0=f_0, p=p, hr_est=hrv_est)
+            #init_coef = np.ones(filter_order+1)
+            curr_nlms = NLMS(step=0.1, filter_order=filter_order, gamma=1e-12, init_coef=init_coef, f_0=f_0, p=p, hr_est=60)
+            ## Change it because of the new idea
             curr_nlms.fit(ref, sig)
             adaptive_noise = curr_nlms.output_vector.real
             filtered_signal = sig - adaptive_noise
+
+            ## update init_coef for next step
+            init_coef = curr_nlms.coef_vector[-1]
+
             res.append(filtered_signal)
             error_vec.append(curr_nlms.error_vector.real)
             output_vec.append(curr_nlms.output_vector.real)
@@ -309,7 +325,7 @@ def swt_peak_through(signals, r_peaks):
         ## find the corresponding values
         local_max = single_sig[local_max_idx]
         local_min = single_sig[local_min_idx]
-        breakpoint()
+
         ## concat two terms: Now we have through-peak=through-peak-through-...
         local_ex_idx = np.sort(np.concatenate((local_max_idx, local_min_idx)))
         local_ex_sort_idx = np.argsort(np.concatenate((local_max_idx, local_min_idx)))
@@ -343,10 +359,10 @@ def swt_peak_through(signals, r_peaks):
             #h = np.arccos((c_prime*c_prime-a*a-b*b)/(-2*a*b))
 
             ## labeling of features, here not consider robustness
-            if r_peaks[x_2] == 1:
-                seg_label = 1
-            else:
+            if r_peaks[idx_number][x_2] == 0:
                 seg_label = 0
+            else:
+                seg_label = 1
             
             single_feauture.append(seg_label)
             single_feauture.append(a+b)
@@ -357,18 +373,18 @@ def swt_peak_through(signals, r_peaks):
             #single_feauture.append(g)
             #single_feauture.append(h)
             sig_features.append(single_feauture)
-        breakpoint()
     return np.array(sig_features)
 
     
 def main():
-    # fs, ecg_signals, imu_signals, rpeaks, bpm_labels, activity_labels = load_pickle_file('Dalia.pkl')
-    dataset = np.load('dataDalia.pkl', allow_pickle=True)
-    rpeak_labels = np.load('aligned_rpeaks.pkl', allow_pickle=True)
-    imu_signals = dataset['data_imu']
-    ecg_signals = dataset['data_ecg']
-    act_labels = dataset['data_activity']
-    fs = 80
+    fs, ecg_signals, imu_signals, rpeaks, bpm_labels, act_labels = load_pickle_file('DaliaDataset/dataDaliaMod.pkl')
+    #dataset = np.load('dataDalia.pkl', allow_pickle=True)
+    #rpeak_labels = np.load('aligned_rpeaks.pkl', allow_pickle=True)
+    #imu_signals = dataset['data_imu']
+    #ecg_signals = dataset['data_ecg']
+    #act_labels = dataset['data_activity']
+    #fs = 80
+
     is_plot = True
     plot_num = 50
 
@@ -471,10 +487,11 @@ def main():
             axes[2].legend()
 
             plt.savefig(step5_plot_dir)
-            plt.clf()
+            plt.close(fig)
 
     ## step 6, feature extraction of peaks and throughs
-    test = swt_peak_through(swt_step5_filtered, rpeak_labels[test_sub_idx])
+    swt_step6_features = swt_peak_through(swt_step5_filtered, rpeaks[test_sub_idx])
+    breakpoint()
 
 if __name__ == '__main__':
     main()

@@ -9,12 +9,12 @@ from scipy import signal
 This file contains some helper functions for data extraction
 and visualization
 '''
-
+## General question: how to close used items to save memory?
 ## Define some constants
 window_size = 8 # seconds
 window_offset = 2 # seconds
 
-save_path = '/cluster/scratch/minqin/sp_imu/imu2ecg/'
+save_path = '/cluster/scratch/minqin/sp_imu/IMU2ECG/plots/'
 
 def load_pickle_file(path):
     '''
@@ -66,7 +66,8 @@ def spec_analysis(ecg_signal, imu_signal, fs_spec, title, save_path):
     plt.title('IMU spectrogram')
     
     plt.savefig(save_path)
-    plt.clf()
+    plt.close(fig1)
+    plt.close(fig2)
 
 def plot_ecg_imu(ecg_signal, imu_signal, title, save_path):
     '''
@@ -77,7 +78,7 @@ def plot_ecg_imu(ecg_signal, imu_signal, title, save_path):
     axs[1].plot(imu_signal)
     axs[0].set_title(title)
     plt.savefig(save_path)
-    plt.clf()
+    plt.close(fig)
 
 def plot_wt_transforms(ecg_signal, imu_signal, signal, coefficient, is_inverse, title, save_path):
     '''
@@ -109,7 +110,7 @@ def plot_wt_transforms(ecg_signal, imu_signal, signal, coefficient, is_inverse, 
         axs[i+offset].set_ylabel('Level {}'.format(i+1))
 
     plt.savefig(save_path)
-    plt.clf()
+    plt.close(fig)
 
 def plot_baseline3_res(signal, detail_coeff, short_energy, local_max_idx, step2_idx, step3_idx, title, save_path):
     '''
@@ -138,4 +139,4 @@ def plot_baseline3_res(signal, detail_coeff, short_energy, local_max_idx, step2_
 
     plt.savefig(save_path)
     # plt.show()
-    plt.clf()
+    plt.close(fig)
